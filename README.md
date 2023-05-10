@@ -10,7 +10,7 @@ Rscript --vanilla Bucket_ReadR.R --help
 ```
 Usage: Bucket_ReadR.R [options]
 
-Bucket_ReadR v1.0.0
+Bucket_ReadR v1.0.1
 
 Options:
 	-b CHARACTER, --buckets=CHARACTER
