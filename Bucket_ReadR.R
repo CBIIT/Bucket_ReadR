@@ -91,6 +91,12 @@ sink()
 for (bucket in (buckets)){
   #pull bucket metadata
   if (!is.na(bucket)){
+    
+    #make sure the bucket does not end in a '/' as that is handled later
+    if (substr(bucket,nchar(bucket),nchar(bucket))=="/"){
+      bucket=substr(bucket,1,nchar(bucket)-1)
+    }
+    
     metadata_files=suppressMessages(suppressWarnings(system(command = paste("aws s3 ls --recursive s3://", bucket,"/",sep = ""),intern = TRUE)))
     
     #fix bucket metadata to have fixed delimiters of one space
@@ -101,7 +107,7 @@ for (bucket in (buckets)){
     #Break bucket string into a data frame and clean up
     bucket_metadata=data.frame(all_metadata=metadata_files)
     bucket_metadata=separate(bucket_metadata, all_metadata, into = c("date","time","file_size","file_path"),sep = " ", extra = "merge")%>%
-      select(-date, -time)%>%
+      select(-time)%>%
       mutate(file_path=paste("s3://",bucket,"/",file_path,sep = ""),extension=file_ext(file_path))
     
     #Fix some of the file extensions. Add more information to gzipped files and get rid of blanks and insert NA for those missing an extension.
@@ -119,6 +125,7 @@ for (bucket in (buckets)){
     bucket_size=round(sum(as.numeric(bucket_metadata$file_size))/1e12, 2)
     bucket_count=dim(bucket_metadata)[1]
     ext_df=count(group_by(bucket_metadata, extension))
+    dates_df=count(group_by(bucket_metadata,date))
     
   
     #Write out bucket stats for each bucket
@@ -129,6 +136,10 @@ for (bucket in (buckets)){
     cat(paste("\nThe breakdown of file extension: ",sep = ""))
     for (ext_count in 1:dim(ext_df)[1]){
       cat(paste('\n\t',ext_df$extension[ext_count],": ",ext_df$n[ext_count],sep = ""))
+    }
+    cat(paste("\nThe breakdown of file dates: ",sep = ""))
+    for (date_count in 1:dim(dates_df)[1]){
+      cat(paste('\n\t',dates_df$date[date_count],": ",dates_df$n[date_count],sep = ""))
     }
     cat("\n\n")
     sink()
