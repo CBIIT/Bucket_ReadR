@@ -110,39 +110,51 @@ for (bucket in (buckets)){
       select(-time)%>%
       mutate(file_path=paste("s3://",bucket,"/",file_path,sep = ""),extension=file_ext(file_path))
     
-    #Fix some of the file extensions. Add more information to gzipped files and get rid of blanks and insert NA for those missing an extension.
-    for (row_ext in 1:dim(bucket_metadata)[1]){
-      if (bucket_metadata$extension[row_ext]=="gz"){
-        new_ext=stri_reverse(paste(unlist(stri_split_fixed(str = stri_reverse(basename(bucket_metadata$file_path[row_ext])), pattern = ".", n = 3))[1:2],collapse = "."))
-        bucket_metadata$extension[row_ext]=new_ext
+    #check to see if there is bucket metadata or an empty bucket.
+    if (dim(bucket_metadata)[1]>0){
+      #Fix some of the file extensions. Add more information to gzipped files and get rid of blanks and insert NA for those missing an extension.
+      for (row_ext in 1:dim(bucket_metadata)[1]){
+        if (bucket_metadata$extension[row_ext]=="gz"){
+          new_ext=stri_reverse(paste(unlist(stri_split_fixed(str = stri_reverse(basename(bucket_metadata$file_path[row_ext])), pattern = ".", n = 3))[1:2],collapse = "."))
+          bucket_metadata$extension[row_ext]=new_ext
+        }
+        if (bucket_metadata$extension[row_ext]==""){
+          bucket_metadata$extension[row_ext]=NA
+        }
       }
-      if (bucket_metadata$extension[row_ext]==""){
-        bucket_metadata$extension[row_ext]=NA
+      
+      #calculate stats
+      bucket_size=round(sum(as.numeric(bucket_metadata$file_size))/1e12, 2)
+      bucket_count=dim(bucket_metadata)[1]
+      ext_df=count(group_by(bucket_metadata, extension))
+      dates_df=count(group_by(bucket_metadata,date))
+      
+      
+      #Write out bucket stats for each bucket
+      sink(paste(path,output_file,".txt",sep = ""),append = TRUE)
+      cat(paste("\n",bucket,"\n",sep = ""))
+      cat(paste("\nThe bucket size in Tb is: ", bucket_size,sep = ""))
+      cat(paste("\nThe bucket file count is: ", bucket_count,sep = ""))
+      cat(paste("\nThe breakdown of file extension: ",sep = ""))
+      for (ext_count in 1:dim(ext_df)[1]){
+        cat(paste('\n\t',ext_df$extension[ext_count],": ",ext_df$n[ext_count],sep = ""))
       }
+      cat(paste("\nThe breakdown of file dates: ",sep = ""))
+      for (date_count in 1:dim(dates_df)[1]){
+        cat(paste('\n\t',dates_df$date[date_count],": ",dates_df$n[date_count],sep = ""))
+      }
+      cat("\n\n")
+      sink()
+    }else{
+      #Write out bucket stats for each bucket
+      sink(paste(path,output_file,".txt",sep = ""),append = TRUE)
+      cat(paste("\n",bucket,"\n",sep = ""))
+      cat(paste("\n#################################",sep = ""))
+      cat(paste("\n#     This bucket is EMPTY.     #", sep = ""))
+      cat(paste("\n#################################",sep = ""))
+      cat("\n\n")
+      sink()
     }
-    
-    #calculate stats
-    bucket_size=round(sum(as.numeric(bucket_metadata$file_size))/1e12, 2)
-    bucket_count=dim(bucket_metadata)[1]
-    ext_df=count(group_by(bucket_metadata, extension))
-    dates_df=count(group_by(bucket_metadata,date))
-    
-  
-    #Write out bucket stats for each bucket
-    sink(paste(path,output_file,".txt",sep = ""),append = TRUE)
-    cat(paste("\n",bucket,"\n",sep = ""))
-    cat(paste("\nThe bucket size in Tb is: ", bucket_size,sep = ""))
-    cat(paste("\nThe bucket file count is: ", bucket_count,sep = ""))
-    cat(paste("\nThe breakdown of file extension: ",sep = ""))
-    for (ext_count in 1:dim(ext_df)[1]){
-      cat(paste('\n\t',ext_df$extension[ext_count],": ",ext_df$n[ext_count],sep = ""))
-    }
-    cat(paste("\nThe breakdown of file dates: ",sep = ""))
-    for (date_count in 1:dim(dates_df)[1]){
-      cat(paste('\n\t',dates_df$date[date_count],": ",dates_df$n[date_count],sep = ""))
-    }
-    cat("\n\n")
-    sink()
   }
 }
 
