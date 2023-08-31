@@ -51,7 +51,9 @@ rm(new.packages)
 #Option list for arg parse
 option_list = list(
   make_option(c("-b", "--buckets"), type="character", default=NULL, 
-              help="A list of buckets, each separated by a comma (no spaces). Please provide the bucket names in a format that does not include the 's3://' prefix or the '/' suffix.", metavar="character")
+              help="A list of buckets, each separated by a comma (no spaces). Please provide the bucket names in a format that does not include the 's3://' prefix or the '/' suffix.", metavar="character"),
+  make_option(c("-p", "--profile"), type="character", default="default", 
+              help="The profile that is used by AWS, the default is 'default'.", metavar="character")
 )
 
 #create list of options and values for file input
@@ -61,6 +63,7 @@ opt = parse_args(opt_parser)
 
 #obtain buckets
 buckets=unlist(strsplit(opt$buckets, ","))
+aws_profile=opt$profile
 
 ###############
 #
@@ -97,7 +100,7 @@ for (bucket in (buckets)){
       bucket=substr(bucket,1,nchar(bucket)-1)
     }
     
-    metadata_files=suppressMessages(suppressWarnings(system(command = paste("aws s3 ls --recursive s3://", bucket,"/",sep = ""),intern = TRUE)))
+    metadata_files=suppressMessages(suppressWarnings(system(command = paste("aws s3 ls --recursive --profile=",aws_profile, " s3://", bucket,"/",sep = ""),intern = TRUE)))
     
     #fix bucket metadata to have fixed delimiters of one space
     while (any(grepl(pattern = "  ",x = metadata_files))==TRUE){
